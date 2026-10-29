@@ -51,6 +51,17 @@
   .grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:16px; }
   .grid figure { text-align:center; font-size:12px; color:#7a6f5c; }
   .grid img { width:100%; height:96px; object-fit:cover; object-position:top; border-radius:10px; border:1px solid #e3d5b3; }
+  .pkg { border:1.5px solid #e3d5b3; border-radius:14px; padding:14px 16px; margin-top:10px; background:#fffdf7; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+  .pkg.sel { border-color:#b02c26; background:#fdf3ec; }
+  .pkg b { font-size:16px; }
+  .pkg .price { color:#b02c26; font-weight:700; font-size:17px; white-space:nowrap; }
+  .pkg p { font-size:13px; color:#7a6f5c; margin-top:4px; line-height:1.6; }
+  .field { margin-top:16px; }
+  .field label { display:block; font-size:14px; font-weight:700; margin-bottom:6px; }
+  .field input { width:100%; padding:13px; border:1.5px solid #ddd0ab; border-radius:10px; font-size:15px; background:#fff; outline:none; }
+  .field input:focus { border-color:#a88034; }
+  .sumBox { background:#fffdf7; border:1.5px solid #e3d5b3; border-radius:16px; padding:18px; margin-top:20px; line-height:1.8; font-size:14px; }
+  .sumBox code { word-break:break-all; font-size:12px; color:#7a6f5c; }
   .capsule { border:2px solid #a88034; border-radius:16px; padding:18px; margin-top:22px; text-align:center; background:#fffdf7; }
   .capsule b { color:#a88034; letter-spacing:3px; }
   .confetti { position:absolute; top:-12px; width:9px; height:15px; z-index:50; pointer-events:none; }
@@ -65,14 +76,36 @@
   <!-- 1 输码 -->
   <section class="view on" id="v-code">
     <img class="avatar" src="assets/avatar.jpg" alt="寿星">
-    <h1>老 K 的生日礼物</h1>
-    <p class="sub">一份礼物已经送达，但它上了锁。<br>输入他的生日，就能进入等待室。</p>
+    <h1 id="codeTitle">老 K 的生日礼物</h1>
+    <p class="sub" id="codeSub">一份礼物已经送达，但它上了锁。<br>输入他的生日，就能进入等待室。</p>
     <div class="codeRow" id="codeRow">
       <input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric">
     </div>
     <p class="hint" id="codeHint"></p>
     <button class="btn" id="btnCode">进入等待室</button>
-    <p class="tiny">开启码 = 他的生日（月+日，共 4 位）<br>礼物将在生日当天 00:00 准时开启</p>
+    <button class="btn ghost" id="btnOrderFromCode">我也送一份</button>
+    <p class="tiny" id="codeTiny">开启码 = 他的生日（月+日，共 4 位）<br>礼物将在生日当天 00:00 准时开启</p>
+  </section>
+
+  <!-- 0 下单页（B1：发起人流程） -->
+  <section class="view" id="v-order">
+    <p class="stageLbl">送 一 份 生 日 礼 物</p>
+    <h1 style="font-size:27px;">选好套餐，填好信息</h1>
+    <p class="sub">生成之后，这页就会按你填的信息来变：<br>寿星名字、生日码、拆出来的内容都跟着走。</p>
+    <div id="pkgList">
+      <div class="pkg" data-pkg="song"><div><b>生日歌</b><p>送礼人自己的声音，唱一首专属歌词，完整编曲。</p></div><span class="price">69 元</span></div>
+      <div class="pkg" data-pkg="card"><div><b>联名签名卡</b><p>一圈朋友留祝福、亲手签名，封成一张卡。</p></div><span class="price">29 元</span></div>
+      <div class="pkg" data-pkg="deluxe"><div><b>珍藏版联名卡</b><p>联名卡 + 每年生日自动重现，还能续写新页。</p></div><span class="price">69 元</span></div>
+      <div class="pkg sel" data-pkg="full"><div><b>三件套</b><p>生日歌 + 人生报纸 + 联名签名卡，最完整的一份。</p></div><span class="price">199 元</span></div>
+    </div>
+    <div class="field"><label>寿星姓名</label><input type="text" id="orderName" placeholder="比如：老 K"></div>
+    <div class="field"><label>寿星生日</label><input type="date" id="orderBirthday"></div>
+    <div class="field"><label>你的名字（可选）</label><input type="text" id="orderFrom" placeholder="送礼人的名字"></div>
+    <p class="sub" id="orderSum" style="margin-top:16px;">已选：三件套 · 199 元</p>
+    <button class="btn" id="btnCreate">生成这份礼物</button>
+    <div class="sumBox" id="orderDone" style="display:none;"></div>
+    <button class="btn ghost" id="btnOrderBack">回到拆礼物页</button>
+    <p class="tiny">现在是演示：生成的礼物先存在这台设备上。<br>正式版会上线到服务器，朋友打开链接就能签名。</p>
   </section>
 
   <!-- 2 等待室（锁定演示） -->
@@ -107,13 +140,13 @@
   <section class="view" id="v-keep">
     <p class="stageLbl">珍 藏 页</p>
     <h1 style="font-size:27px;">这份礼物会一直留着</h1>
-    <div class="grid">
-      <figure><img src="assets/card.jpg" alt="联名卡"><figcaption>联名签名卡</figcaption></figure>
-      <figure><img src="assets/newspaper.jpg" alt="人生报纸"><figcaption>人生报纸</figcaption></figure>
-      <figure><img src="assets/poster.jpg" alt="分享海报"><figcaption>分享海报</figcaption></figure>
+    <div class="grid" id="keepGrid">
+      <figure id="figCard"><img src="assets/card.jpg" alt="联名卡"><figcaption>联名签名卡</figcaption></figure>
+      <figure id="figPaper"><img src="assets/newspaper.jpg" alt="人生报纸"><figcaption>人生报纸</figcaption></figure>
+      <figure id="figPoster"><img src="assets/poster.jpg" alt="分享海报"><figcaption>分享海报</figcaption></figure>
     </div>
-    <audio controls src="assets/song.mp3"></audio>
-    <div class="capsule"><b>时 间 胶 囊</b><p style="margin-top:8px; font-size:14px; line-height:1.7;">2027 年 10 月 30 日，这张卡会再次送到他手里，<br>并添上一页今年的新签名。</p></div>
+    <audio id="keepAudio" controls src="assets/song.mp3"></audio>
+    <div class="capsule" id="keepCapsule"><b>时 间 胶 囊</b><p id="capsuleTxt" style="margin-top:8px; font-size:14px; line-height:1.7;">2027 年 10 月 30 日，这张卡会再次送到他手里，<br>并添上一页今年的新签名。</p></div>
     <button class="btn dark" id="btnVideo">生成一分钟分享视频</button>
     <button class="btn" id="btnSend">我也送一份</button>
     <p class="tiny">长按上方海报图可以保存，发到朋友圈<br>一首歌 · 一张报纸 · 一张联名卡 —— 生日礼物工坊</p>
@@ -126,6 +159,65 @@ var $ = function(id){ return document.getElementById(id); };
 function show(id){ document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('on'); }); $(id).classList.add('on'); window.scrollTo(0,0); }
 function toast(t){ var el=$('toast'); el.textContent=t; el.classList.add('on'); setTimeout(function(){ el.classList.remove('on'); },2600); }
 
+/* B1 礼物配置：默认是老 K 的样品；下单或链接参数会覆盖它 */
+var PKGS = {
+  song:   { label:'生日歌', price:69, hasSong:true, hasCard:false, hasPaper:false },
+  card:   { label:'联名签名卡', price:29, hasSong:false, hasCard:true, hasPaper:false },
+  deluxe: { label:'珍藏版联名卡', price:69, hasSong:false, hasCard:true, hasPaper:false },
+  full:   { label:'三件套', price:199, hasSong:true, hasCard:true, hasPaper:true }
+};
+var DEFAULT_CONFIG = { name:'老 K', code:'1030', birthday:'1994-10-30', pkg:'full', from:'' };
+function loadConfig(){
+  var cfg = {};
+  Object.keys(DEFAULT_CONFIG).forEach(function(k){ cfg[k] = DEFAULT_CONFIG[k]; });
+  try {
+    var saved = JSON.parse(localStorage.getItem('birthdayGiftConfig') || '{}');
+    Object.keys(saved).forEach(function(k){ if(saved[k]) cfg[k] = saved[k]; });
+  } catch(e) {}
+  var q = {};
+  location.search.replace(/^\?/, '').split('&').forEach(function(p){
+    var kv = p.split('='); if(kv[0]) q[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1] || '');
+  });
+  if(q.name) cfg.name = q.name;
+  if(q.pkg && PKGS[q.pkg]) cfg.pkg = q.pkg;
+  if(q.code && /^\d{4}$/.test(q.code)) cfg.code = q.code;
+  if(q.birthday && /^\d{4}-\d{2}-\d{2}$/.test(q.birthday)){
+    cfg.birthday = q.birthday;
+    cfg.code = q.birthday.slice(5,7) + q.birthday.slice(8,10);
+  }
+  return cfg;
+}
+var giftConfig = loadConfig();
+function pkgOf(){ return PKGS[giftConfig.pkg] || PKGS.full; }
+function unlockDate(){
+  var y = new Date().getFullYear();
+  return new Date(y + '-' + giftConfig.code.slice(0,2) + '-' + giftConfig.code.slice(2) + 'T00:00:00+08:00');
+}
+function nextBirthdayText(){
+  var now = new Date(), y = now.getFullYear();
+  var thisYear = unlockDate();
+  var ny = (now >= thisYear) ? y + 1 : y;
+  return ny + ' 年 ' + giftConfig.code.slice(0,2).replace(/^0/,'') + ' 月 ' + giftConfig.code.slice(2).replace(/^0/,'') + ' 日';
+}
+function applyConfig(){
+  $('codeTitle').textContent = giftConfig.name + '的生日礼物';
+  $('codeSub').innerHTML = '一份礼物已经送达，但它上了锁。<br>输入' + giftConfig.name + '的生日，就能进入等待室。';
+  $('codeTiny').innerHTML = '开启码 = ' + giftConfig.name + '的生日（月+日，共 4 位）<br>礼物将在生日当天 00:00 准时开启';
+  var p = pkgOf();
+  $('figCard').style.display = p.hasCard ? '' : 'none';
+  $('figPaper').style.display = p.hasPaper ? '' : 'none';
+  $('keepAudio').style.display = p.hasSong ? '' : 'none';
+  $('keepCapsule').style.display = p.hasCard ? '' : 'none';
+  $('capsuleTxt').innerHTML = nextBirthdayText() + '，这张卡会再次送到他手里，<br>并添上一页今年的新签名。';
+}
+function saveConfig(){
+  try { localStorage.setItem('birthdayGiftConfig', JSON.stringify(giftConfig)); } catch(e) {}
+}
+function giftLink(){
+  var base = location.origin + location.pathname;
+  return base + '?name=' + encodeURIComponent(giftConfig.name) + '&code=' + giftConfig.code + '&pkg=' + giftConfig.pkg;
+}
+
 /* 输码 */
 var inputs = document.querySelectorAll('#codeRow input');
 inputs.forEach(function(inp,i){
@@ -134,14 +226,14 @@ inputs.forEach(function(inp,i){
 });
 $('btnCode').onclick = function(){
   var code = Array.prototype.map.call(inputs, function(i){ return i.value; }).join('');
-  if(code === '1030'){ enterWaitOrOpen(); }
-  else { $('codeRow').classList.remove('shake'); void $('codeRow').offsetWidth; $('codeRow').classList.add('shake'); $('codeHint').textContent = '不对哦。提示：他的生日是几月几号？'; }
+  if(code === giftConfig.code){ enterWaitOrOpen(); }
+  else { $('codeRow').classList.remove('shake'); void $('codeRow').offsetWidth; $('codeRow').classList.add('shake'); $('codeHint').textContent = '不对哦。提示：' + giftConfig.name + '的生日是几月几号？'; }
 };
-var UNLOCK = new Date('2026-10-30T00:00:00+08:00');
+$('btnOrderFromCode').onclick = function(){ show('v-order'); };
 var demoTarget = null, timer = null;
 function enterWaitOrOpen(){
-  if(new Date() >= UNLOCK){ startReveal(); }
-  else { startWait(UNLOCK); }
+  if(new Date() >= unlockDate()){ startReveal(); }
+  else { startWait(unlockDate()); }
 }
 $('btnSkipWait').onclick = function(){ if(timer) clearInterval(timer); startReveal(); };
 
@@ -195,36 +287,95 @@ function confetti(){
     (function(el){ setTimeout(function(){ el.remove(); }, 3200); })(c);
   }
 }
+/* B1：拆礼物的步骤按套餐来排，不在套餐里的件就不出现 */
+var stage = 0, steps = [];
+function buildSteps(){
+  var p = pkgOf(), s = [];
+  if(p.hasCard){ s.push('letter'); s.push('card'); }
+  if(p.hasSong){ s.push('song'); }
+  if(p.hasPaper){ s.push('paper'); }
+  return s;
+}
+function stepLabel(key){
+  var p = pkgOf();
+  if(key === 'letter') return '第一件 · 联名签名卡';
+  if(key === 'card') return '联名签名卡';
+  if(key === 'song') return p.hasCard || p.hasPaper ? '下一件 · 听这首歌' : '为你唱的歌';
+  if(key === 'paper') return '下一件 · 看今天的报纸';
+  return '下一件';
+}
 function startReveal(){
-  show('v-open'); stage = 0; confetti(); renderStage();
+  show('v-open'); steps = buildSteps(); stage = 0; confetti(); renderStage();
 }
 function renderStage(){
   var box = $('stageBox');
-  if(stage === 0){
+  var key = steps[stage];
+  var isLast = (stage === steps.length - 1);
+  var nextText = isLast ? '拆完了 · 收进珍藏页' : stepLabel(steps[stage + 1]);
+  if(key === 'letter'){
     box.innerHTML = '<div class="letter" id="letterBox"><div class="seal">礼</div><h3 style="font-size:20px; margin-bottom:8px;">第一件 · 联名签名卡</h3><p style="color:#7a6f5c; font-size:14px; line-height:1.7;">一群人想对你说话，都封存在这里。<br>点一下，打开它。</p></div>';
-    $('letterBox').onclick = function(){ stage = 1; renderStage(); };
-  } else if(stage === 1){
-    box.innerHTML = '<img class="giftImg" src="assets/card.jpg" alt="联名签名卡"><button class="btn" id="nextBtn">下一件 · 听这首歌</button>';
-    $('nextBtn').onclick = function(){ stage = 2; renderStage(); };
-  } else if(stage === 2){
-    box.innerHTML = '<p class="stageLbl">第 二 件 · 为 他 唱 的 歌</p><div class="disc" id="disc"></div><div class="songCtl"><button id="playBtn">▶</button></div><audio id="song" src="assets/song.mp3" preload="auto"></audio><button class="btn" id="nextBtn">下一件 · 看今天的报纸</button>';
+    $('letterBox').onclick = function(){ stage++; renderStage(); };
+  } else if(key === 'card'){
+    var extra = (giftConfig.pkg === 'deluxe') ? '<p style="color:#7a6f5c; font-size:14px; line-height:1.7; text-align:center; margin-top:10px;">珍藏版：每年生日它都会再来一次，并添上新页。</p>' : '';
+    box.innerHTML = '<img class="giftImg" src="assets/card.jpg" alt="联名签名卡">' + extra + '<button class="btn" id="nextBtn">' + nextText + '</button>';
+    $('nextBtn').onclick = function(){ if(isLast){ show('v-keep'); } else { stage++; renderStage(); } };
+  } else if(key === 'song'){
+    box.innerHTML = '<p class="stageLbl">为 ' + giftConfig.name + ' 唱 的 歌</p><div class="disc" id="disc"></div><div class="songCtl"><button id="playBtn">▶</button></div><audio id="song" src="assets/song.mp3" preload="auto"></audio><button class="btn" id="nextBtn">' + nextText + '</button>';
     var audio = $('song'), disc = $('disc'), pb = $('playBtn');
     pb.onclick = function(){ if(audio.paused){ audio.play(); disc.classList.add('playing'); pb.textContent='❚❚'; } else { audio.pause(); disc.classList.remove('playing'); pb.textContent='▶'; } };
     audio.onended = function(){ disc.classList.remove('playing'); pb.textContent='▶'; };
-    $('nextBtn').onclick = function(){ audio.pause(); stage = 3; renderStage(); };
-  } else if(stage === 3){
-    box.innerHTML = '<p class="stageLbl">第 三 件 · 人 生 报 纸</p><img class="giftImg" src="assets/newspaper.jpg" alt="人生报纸"><button class="btn" id="nextBtn">拆完了 · 收进珍藏页</button>';
+    $('nextBtn').onclick = function(){ audio.pause(); if(isLast){ show('v-keep'); } else { stage++; renderStage(); } };
+  } else if(key === 'paper'){
+    box.innerHTML = '<p class="stageLbl">' + giftConfig.name + ' 的 人 生 报 纸</p><img class="giftImg" src="assets/newspaper.jpg" alt="人生报纸"><button class="btn" id="nextBtn">' + nextText + '</button>';
     $('nextBtn').onclick = function(){ show('v-keep'); };
   }
 }
 $('btnVideo').onclick = function(){ toast('正式版会自动把歌、卡和报纸剪成一条一分钟视频'); };
-$('btnSend').onclick = function(){ toast('正式版在这里下单：选套餐、填寿星信息、邀朋友签名'); };
+$('btnSend').onclick = function(){ show('v-order'); };
+
+/* B1 下单页 */
+var orderPkg = giftConfig.pkg;
+function renderOrder(){
+  document.querySelectorAll('#pkgList .pkg').forEach(function(el){
+    el.classList.toggle('sel', el.getAttribute('data-pkg') === orderPkg);
+  });
+  var p = PKGS[orderPkg];
+  $('orderSum').textContent = '已选：' + p.label + ' · ' + p.price + ' 元';
+}
+document.querySelectorAll('#pkgList .pkg').forEach(function(el){
+  el.onclick = function(){ orderPkg = el.getAttribute('data-pkg'); renderOrder(); };
+});
+$('btnCreate').onclick = function(){
+  var name = $('orderName').value.trim();
+  var bd = $('orderBirthday').value;
+  if(!name){ toast('先填寿星姓名'); return; }
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(bd)){ toast('再选一下寿星生日'); return; }
+  giftConfig = { name:name, code:bd.slice(5,7) + bd.slice(8,10), birthday:bd, pkg:orderPkg, from:$('orderFrom').value.trim() };
+  saveConfig(); applyConfig();
+  var p = PKGS[orderPkg];
+  $('orderDone').style.display = 'block';
+  $('orderDone').innerHTML = '<b>礼物生成了：' + name + ' · ' + p.label + ' · ' + p.price + ' 元</b><br>生日码是 ' + giftConfig.code + '，寿星输这个码就能进等待室。<br>礼物链接：<br><code>' + giftLink() + '</code><br><button class="btn" id="btnPreviewGift">预览这份礼物</button><button class="btn ghost" id="btnCopyLink">复制礼物链接</button>';
+  $('btnPreviewGift').onclick = function(){ show('v-code'); };
+  $('btnCopyLink').onclick = function(){
+    var link = giftLink();
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(link).then(function(){ toast('链接已复制'); }, function(){ toast('复制失败，长按上面的链接手动复制'); });
+    } else { toast('请长按上面的链接手动复制'); }
+  };
+  toast('礼物生成了');
+};
+$('btnOrderBack').onclick = function(){ show('v-code'); };
+
+/* 初始渲染：默认就是老 K 的样品 */
+applyConfig(); renderOrder();
 
 /* 演示入口：地址带 ?wait=1 时，先看等待状态（倒计时到10分钟后） */
 if(location.search.indexOf('wait=1') > -1){
-  inputs.forEach(function(i,idx){ i.value = '1030'[idx]; });
+  inputs.forEach(function(i,idx){ i.value = giftConfig.code[idx]; });
   startWait(new Date(Date.now() + 10*60*1000));
 }
+/* 演示入口：地址带 ?order=1 时，直接看下单页 */
+if(location.search.indexOf('order=1') > -1){ show('v-order'); }
 </script>
 </body>
 </html>
