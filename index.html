@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>老K的生日礼物 · 生日礼物工坊</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:#f3ecdd; color:#2a251e; }
+  .wrap { max-width:480px; margin:0 auto; min-height:100vh; background:#faf6ee; box-shadow:0 0 40px rgba(90,70,40,.12); position:relative; overflow:hidden; }
+  .view { display:none; padding:34px 24px 48px; animation:fadeUp .5s ease both; }
+  .view.on { display:block; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(14px);} to { opacity:1; transform:none;} }
+  .avatar { width:128px; height:128px; border-radius:50%; object-fit:cover; border:3px solid #a88034; display:block; margin:8px auto 14px; }
+  h1 { font-family:"Songti SC","STSong",serif; font-size:32px; text-align:center; letter-spacing:2px; }
+  .sub { text-align:center; color:#7a6f5c; font-size:15px; margin-top:8px; line-height:1.6; }
+  .gold { color:#a88034; }
+  .red { color:#b02c26; }
+  .codeRow { display:flex; gap:12px; justify-content:center; margin:30px 0 8px; }
+  .codeRow input { width:58px; height:68px; font-size:32px; text-align:center; border:2px solid #d8c9a3; border-radius:12px; background:#fffdf7; outline:none; font-weight:700; color:#2a251e; }
+  .codeRow input:focus { border-color:#a88034; }
+  .shake { animation:shake .4s; }
+  @keyframes shake { 0%,100%{transform:none} 25%{transform:translateX(-7px)} 75%{transform:translateX(7px)} }
+  .hint { text-align:center; color:#b02c26; font-size:13px; min-height:20px; }
+  .btn { display:block; width:100%; padding:16px; margin-top:18px; border:none; border-radius:14px; background:#b02c26; color:#fff; font-size:18px; font-weight:700; letter-spacing:2px; cursor:pointer; }
+  .btn.dark { background:#2a251e; }
+  .btn.ghost { background:transparent; color:#7a6f5c; border:1.5px solid #d8c9a3; font-weight:400; font-size:15px; }
+  .btn:active { transform:scale(.98); }
+  .tiny { text-align:center; font-size:12px; color:#a3967c; margin-top:22px; line-height:1.7; }
+  .count { display:flex; gap:10px; justify-content:center; margin:26px 0 6px; }
+  .count div { background:#2a251e; color:#faf6ee; border-radius:12px; width:74px; padding:12px 0 9px; text-align:center; }
+  .count b { font-size:28px; display:block; }
+  .count span { font-size:11px; color:#cbbd97; }
+  .wall { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:16px 0 4px; }
+  .dot { width:38px; height:38px; border-radius:50%; color:#fff; font-size:15px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .cardBox { background:#fffdf7; border:1.5px solid #e3d5b3; border-radius:16px; padding:18px; margin-top:20px; }
+  .cardBox h3 { font-size:16px; margin-bottom:10px; }
+  .cardBox input[type=text] { width:100%; padding:12px; border:1.5px solid #ddd0ab; border-radius:10px; font-size:15px; margin-bottom:10px; background:#fff; outline:none; }
+  #pad { width:100%; height:110px; border:1.5px dashed #c9b98d; border-radius:10px; background:#fff; touch-action:none; }
+  .padLbl { font-size:12px; color:#a3967c; margin:2px 0 6px; }
+  .stageLbl { text-align:center; color:#a88034; font-weight:700; letter-spacing:4px; font-size:13px; margin-bottom:10px; }
+  .giftImg { width:100%; border-radius:14px; box-shadow:0 10px 30px rgba(90,70,40,.18); display:block; }
+  .letter { background:#fffdf7; border:1.5px solid #e3d5b3; border-radius:16px; padding:28px 22px; text-align:center; cursor:pointer; }
+  .letter .seal { width:64px; height:64px; border-radius:50%; background:#b02c26; color:#fff; font-size:26px; display:flex; align-items:center; justify-content:center; margin:0 auto 14px; font-family:serif; }
+  .disc { width:190px; height:190px; border-radius:50%; margin:16px auto; background:radial-gradient(circle,#3a342a 0 26%,#211d16 27% 60%,#171410 61%); position:relative; animation:spin 7s linear infinite paused; box-shadow:0 14px 34px rgba(40,30,10,.35); }
+  .disc.playing { animation-play-state:running; }
+  @keyframes spin { to { transform:rotate(360deg);} }
+  .disc::after { content:""; position:absolute; inset:74px; border-radius:50%; background:#b02c26; border:3px solid #faf6ee; }
+  .songCtl { text-align:center; margin-top:6px; }
+  .songCtl button { width:64px; height:64px; border-radius:50%; border:none; background:#b02c26; color:#fff; font-size:24px; cursor:pointer; }
+  .grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:16px; }
+  .grid figure { text-align:center; font-size:12px; color:#7a6f5c; }
+  .grid img { width:100%; height:96px; object-fit:cover; object-position:top; border-radius:10px; border:1px solid #e3d5b3; }
+  .capsule { border:2px solid #a88034; border-radius:16px; padding:18px; margin-top:22px; text-align:center; background:#fffdf7; }
+  .capsule b { color:#a88034; letter-spacing:3px; }
+  .confetti { position:absolute; top:-12px; width:9px; height:15px; z-index:50; pointer-events:none; }
+  #toast { position:fixed; left:50%; bottom:34px; transform:translateX(-50%) translateY(20px); background:#2a251e; color:#faf6ee; padding:12px 20px; border-radius:24px; font-size:14px; opacity:0; transition:.3s; z-index:99; max-width:86vw; text-align:center; }
+  #toast.on { opacity:1; transform:translateX(-50%); }
+  audio { width:100%; margin-top:10px; }
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+
+  <!-- 1 输码 -->
+  <section class="view on" id="v-code">
+    <img class="avatar" src="assets/avatar.jpg" alt="寿星">
+    <h1>老 K 的生日礼物</h1>
+    <p class="sub">一份礼物已经送达，但它上了锁。<br>输入他的生日，就能进入等待室。</p>
+    <div class="codeRow" id="codeRow">
+      <input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric">
+    </div>
+    <p class="hint" id="codeHint"></p>
+    <button class="btn" id="btnCode">进入等待室</button>
+    <p class="tiny">开启码 = 他的生日（月+日，共 4 位）<br>礼物将在生日当天 00:00 准时开启</p>
+  </section>
+
+  <!-- 2 等待室（锁定演示） -->
+  <section class="view" id="v-wait">
+    <p class="stageLbl">等 待 室</p>
+    <h1 style="font-size:27px;">还没到拆的时候</h1>
+    <div class="count"><div><b id="cd-d">0</b><span>天</span></div><div><b id="cd-h">0</b><span>时</span></div><div><b id="cd-m">0</b><span>分</span></div><div><b id="cd-s">0</b><span>秒</span></div></div>
+    <p class="sub">礼物开启之前，你可以先留下一句祝福——<br>它会被封存起来，生日当天他拆礼物时看到。</p>
+    <div class="wall" id="wall"></div>
+    <p class="sub" id="wallTxt"></p>
+    <div class="cardBox">
+      <h3>留下你的祝福</h3>
+      <input type="text" id="signName" placeholder="你的名字">
+      <input type="text" id="signMsg" placeholder="想对他说的一句话">
+      <p class="padLbl">在下面框里，亲手签上你的名字：</p>
+      <canvas id="pad" width="800" height="220"></canvas>
+      <button class="btn" id="btnSign">封存这句祝福</button>
+      <p class="tiny" style="margin-top:10px;">正式版还支持录一段原声、自拍生成动漫头像</p>
+    </div>
+    <button class="btn ghost" id="btnSkipWait">演示：直接看已开启状态</button>
+  </section>
+
+  <!-- 3 揭晓 -->
+  <section class="view" id="v-open">
+    <p class="stageLbl">生 日 快 乐</p>
+    <h1 style="font-size:27px;">礼物开启了</h1>
+    <p class="sub">一共三件，按顺序拆。</p>
+    <div id="stageBox" style="margin-top:22px;"></div>
+  </section>
+
+  <!-- 4 珍藏页 -->
+  <section class="view" id="v-keep">
+    <p class="stageLbl">珍 藏 页</p>
+    <h1 style="font-size:27px;">这份礼物会一直留着</h1>
+    <div class="grid">
+      <figure><img src="assets/card.jpg" alt="联名卡"><figcaption>联名签名卡</figcaption></figure>
+      <figure><img src="assets/newspaper.jpg" alt="人生报纸"><figcaption>人生报纸</figcaption></figure>
+      <figure><img src="assets/poster.jpg" alt="分享海报"><figcaption>分享海报</figcaption></figure>
+    </div>
+    <audio controls src="assets/song.mp3"></audio>
+    <div class="capsule"><b>时 间 胶 囊</b><p style="margin-top:8px; font-size:14px; line-height:1.7;">2027 年 10 月 30 日，这张卡会再次送到他手里，<br>并添上一页今年的新签名。</p></div>
+    <button class="btn dark" id="btnVideo">生成一分钟分享视频</button>
+    <button class="btn" id="btnSend">我也送一份</button>
+    <p class="tiny">长按上方海报图可以保存，发到朋友圈<br>一首歌 · 一张报纸 · 一张联名卡 —— 生日礼物工坊</p>
+  </section>
+</div>
+<div id="toast"></div>
+
+<script>
+var $ = function(id){ return document.getElementById(id); };
+function show(id){ document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('on'); }); $(id).classList.add('on'); window.scrollTo(0,0); }
+function toast(t){ var el=$('toast'); el.textContent=t; el.classList.add('on'); setTimeout(function(){ el.classList.remove('on'); },2600); }
+
+/* 输码 */
+var inputs = document.querySelectorAll('#codeRow input');
+inputs.forEach(function(inp,i){
+  inp.addEventListener('input', function(){ inp.value = inp.value.replace(/\D/g,''); if(inp.value && i<3) inputs[i+1].focus(); });
+  inp.addEventListener('keydown', function(e){ if(e.key==='Backspace' && !inp.value && i>0) inputs[i-1].focus(); });
+});
+$('btnCode').onclick = function(){
+  var code = Array.prototype.map.call(inputs, function(i){ return i.value; }).join('');
+  if(code === '1030'){ enterWaitOrOpen(); }
+  else { $('codeRow').classList.remove('shake'); void $('codeRow').offsetWidth; $('codeRow').classList.add('shake'); $('codeHint').textContent = '不对哦。提示：他的生日是几月几号？'; }
+};
+var UNLOCK = new Date('2026-10-30T00:00:00+08:00');
+var demoTarget = null, timer = null;
+function enterWaitOrOpen(){
+  if(new Date() >= UNLOCK){ startReveal(); }
+  else { startWait(UNLOCK); }
+}
+$('btnSkipWait').onclick = function(){ if(timer) clearInterval(timer); startReveal(); };
+
+/* 等待室 */
+var wallData = [ ['K','#b02c26'],['墨','#466e5a'],['G','#5a508c'],['本','#a88034'],['+14','#8d8168'] ];
+var signCount = 18;
+function renderWall(){
+  $('wall').innerHTML = wallData.map(function(w){ return '<div class="dot" style="background:'+w[1]+'">'+w[0]+'</div>'; }).join('');
+  $('wallTxt').textContent = '已有 ' + signCount + ' 位朋友留下了祝福';
+}
+function startWait(target){
+  show('v-wait'); renderWall();
+  demoTarget = target;
+  if(timer) clearInterval(timer);
+  var tick = function(){
+    var diff = Math.max(0, demoTarget - new Date());
+    var s = Math.floor(diff/1000);
+    $('cd-d').textContent = Math.floor(s/86400); $('cd-h').textContent = Math.floor(s%86400/3600);
+    $('cd-m').textContent = Math.floor(s%3600/60); $('cd-s').textContent = s%60;
+    if(diff <= 0){ clearInterval(timer); startReveal(); }
+  };
+  tick(); timer = setInterval(tick, 1000);
+}
+/* 手写板 */
+var pad = $('pad'), ctx = pad.getContext('2d'), drawing = false;
+ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.strokeStyle = '#2b2834';
+function padPos(e){ var r = pad.getBoundingClientRect(); var t = e.touches ? e.touches[0] : e; return { x:(t.clientX-r.left)*pad.width/r.width, y:(t.clientY-r.top)*pad.height/r.height }; }
+pad.addEventListener('pointerdown', function(e){ drawing = true; var p = padPos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); });
+pad.addEventListener('pointermove', function(e){ if(!drawing) return; var p = padPos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); });
+window.addEventListener('pointerup', function(){ drawing = false; });
+$('btnSign').onclick = function(){
+  var name = $('signName').value.trim();
+  if(!name){ toast('先写上你的名字吧'); return; }
+  wallData.splice(wallData.length-1, 0, [name.slice(0,1), '#7a6f5c']);
+  signCount++;
+  renderWall();
+  $('signName').value=''; $('signMsg').value=''; ctx.clearRect(0,0,pad.width,pad.height);
+  toast('已封存。生日当天，他拆礼物时会看到。');
+};
+
+/* 揭晓流程 */
+var stage = 0;
+function confetti(){
+  var colors = ['#b02c26','#a88034','#466e5a','#5a508c','#e0b64f'];
+  for(var i=0;i<44;i++){
+    var c = document.createElement('div'); c.className='confetti';
+    c.style.left = Math.random()*100+'%'; c.style.background = colors[i%5];
+    c.style.transform = 'rotate('+(Math.random()*360)+'deg)';
+    $('wrap').appendChild(c);
+    c.animate([ { transform:'translateY(0) rotate(0deg)', opacity:1 }, { transform:'translateY('+(560+Math.random()*300)+'px) rotate('+(360+Math.random()*360)+'deg)', opacity:.9 } ], { duration:1600+Math.random()*1400, easing:'cubic-bezier(.2,.7,.3,1)' });
+    (function(el){ setTimeout(function(){ el.remove(); }, 3200); })(c);
+  }
+}
+function startReveal(){
+  show('v-open'); stage = 0; confetti(); renderStage();
+}
+function renderStage(){
+  var box = $('stageBox');
+  if(stage === 0){
+    box.innerHTML = '<div class="letter" id="letterBox"><div class="seal">礼</div><h3 style="font-size:20px; margin-bottom:8px;">第一件 · 联名签名卡</h3><p style="color:#7a6f5c; font-size:14px; line-height:1.7;">一群人想对你说话，都封存在这里。<br>点一下，打开它。</p></div>';
+    $('letterBox').onclick = function(){ stage = 1; renderStage(); };
+  } else if(stage === 1){
+    box.innerHTML = '<img class="giftImg" src="assets/card.jpg" alt="联名签名卡"><button class="btn" id="nextBtn">下一件 · 听这首歌</button>';
+    $('nextBtn').onclick = function(){ stage = 2; renderStage(); };
+  } else if(stage === 2){
+    box.innerHTML = '<p class="stageLbl">第 二 件 · 为 他 唱 的 歌</p><div class="disc" id="disc"></div><div class="songCtl"><button id="playBtn">▶</button></div><audio id="song" src="assets/song.mp3" preload="auto"></audio><button class="btn" id="nextBtn">下一件 · 看今天的报纸</button>';
+    var audio = $('song'), disc = $('disc'), pb = $('playBtn');
+    pb.onclick = function(){ if(audio.paused){ audio.play(); disc.classList.add('playing'); pb.textContent='❚❚'; } else { audio.pause(); disc.classList.remove('playing'); pb.textContent='▶'; } };
+    audio.onended = function(){ disc.classList.remove('playing'); pb.textContent='▶'; };
+    $('nextBtn').onclick = function(){ audio.pause(); stage = 3; renderStage(); };
+  } else if(stage === 3){
+    box.innerHTML = '<p class="stageLbl">第 三 件 · 人 生 报 纸</p><img class="giftImg" src="assets/newspaper.jpg" alt="人生报纸"><button class="btn" id="nextBtn">拆完了 · 收进珍藏页</button>';
+    $('nextBtn').onclick = function(){ show('v-keep'); };
+  }
+}
+$('btnVideo').onclick = function(){ toast('正式版会自动把歌、卡和报纸剪成一条一分钟视频'); };
+$('btnSend').onclick = function(){ toast('正式版在这里下单：选套餐、填寿星信息、邀朋友签名'); };
+
+/* 演示入口：地址带 ?wait=1 时，先看等待状态（倒计时到10分钟后） */
+if(location.search.indexOf('wait=1') > -1){
+  inputs.forEach(function(i,idx){ i.value = '1030'[idx]; });
+  startWait(new Date(Date.now() + 10*60*1000));
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "runtime": "static",
+  "platformVersion": 15,
+  "entry": "index.html",
+  "name": "生日礼物 · 拆礼物演示",
+  "slug": "birthday-gift",
+  "managedCronJobs": []
+}
