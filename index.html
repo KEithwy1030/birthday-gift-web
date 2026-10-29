@@ -32,6 +32,11 @@
   .count b { font-size:28px; display:block; }
   .count span { font-size:11px; color:#cbbd97; }
   .wall { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:16px 0 4px; }
+  .signList { margin-top:14px; display:flex; flex-direction:column; gap:10px; }
+  .signItem { background:#fffdf7; border:1.5px solid #e3d5b3; border-radius:12px; padding:12px 14px; }
+  .signItem b { font-size:15px; }
+  .signItem p { font-size:14px; color:#5c5342; line-height:1.7; margin-top:4px; }
+  .signItem img { max-width:100%; margin-top:8px; border-radius:8px; background:#fff; }
   .dot { width:38px; height:38px; border-radius:50%; color:#fff; font-size:15px; font-weight:700; display:flex; align-items:center; justify-content:center; }
   .cardBox { background:#fffdf7; border:1.5px solid #e3d5b3; border-radius:16px; padding:18px; margin-top:20px; }
   .cardBox h3 { font-size:16px; margin-bottom:10px; }
@@ -116,6 +121,7 @@
     <p class="sub">礼物开启之前，你可以先留下一句祝福——<br>它会被封存起来，生日当天他拆礼物时看到。</p>
     <div class="wall" id="wall"></div>
     <p class="sub" id="wallTxt"></p>
+    <div class="signList" id="signList"></div>
     <div class="cardBox">
       <h3>留下你的祝福</h3>
       <input type="text" id="signName" placeholder="你的名字">
@@ -237,12 +243,60 @@ function enterWaitOrOpen(){
 }
 $('btnSkipWait').onclick = function(){ if(timer) clearInterval(timer); startReveal(); };
 
+/* B2 签名收集数据层：一条祝福 = {name, msg, sig(手写图，可空), voice(预留), avatar(预留), createdAt}
+   现在存在浏览器本地存储（按礼物生日码分桶）；正式版把 SignatureAPI 换成 fetch 调接口即可，字段不变。接口说明见 docs/04-签名收集接口说明.md */
+/* B2 SIGNATURE STORE BEGIN */
+var SIG_COLORS = ['#b02c26','#466e5a','#5a508c','#a88034','#7a6f5c'];
+function sigKey(){ return 'birthdayGiftSignatures:v1:' + giftConfig.code; }
+function sigColor(name){
+  var h = 0, i; for(i = 0; i < name.length; i++){ h = (h * 31 + name.charCodeAt(i)) % 997; }
+  return SIG_COLORS[h % SIG_COLORS.length];
+}
+function seedSignatures(){
+  if(giftConfig.code !== '1030') return [];
+  return [
+    { name:'小K', msg:'生日快乐！这份礼物我们准备了很久。', sig:'', voice:null, avatar:null, createdAt:'2026-10-30T00:00:00+08:00' },
+    { name:'小墨', msg:'32 岁快乐，新的一岁继续往前冲。', sig:'', voice:null, avatar:null, createdAt:'2026-10-30T00:00:00+08:00' },
+    { name:'Grok', msg:'生日快乐，愿新的一岁有更多好消息。', sig:'', voice:null, avatar:null, createdAt:'2026-10-30T00:00:00+08:00' },
+    { name:'本地Agent', msg:'生日快乐！', sig:'', voice:null, avatar:null, createdAt:'2026-10-30T00:00:00+08:00' }
+  ];
+}
+function loadSignatures(){
+  try {
+    var raw = localStorage.getItem(sigKey());
+    if(raw === null){ var seed = seedSignatures(); localStorage.setItem(sigKey(), JSON.stringify(seed)); return seed; }
+    var list = JSON.parse(raw);
+    return Array.isArray(list) ? list : [];
+  } catch(e) { return seedSignatures(); }
+}
+function saveSignatures(list){
+  try { localStorage.setItem(sigKey(), JSON.stringify(list)); } catch(e) {}
+}
+function addSignature(entry){
+  var list = loadSignatures(); list.push(entry); saveSignatures(list); return list;
+}
+/* B2 SIGNATURE STORE END */
+var SignatureAPI = {
+  /* 正式版后端接入点：把 load/save 换成 fetch('/api/gifts/' + giftId + '/signatures')，其余代码不用动 */
+  load: loadSignatures,
+  save: addSignature
+};
+function escHtml(s){
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function signaturesHtml(list){
+  if(!list.length) return '<p style="color:#7a6f5c; font-size:14px; line-height:1.7; text-align:center;">还没有人留言，你是第一个。</p>';
+  return list.map(function(s){
+    var sigImg = s.sig ? '<img src="' + s.sig + '" alt="手写签名">' : '';
+    return '<div class="signItem"><b>' + escHtml(s.name) + '</b><p>' + escHtml(s.msg || '亲手签了个名') + '</p>' + sigImg + '</div>';
+  }).join('');
+}
 /* 等待室 */
-var wallData = [ ['K','#b02c26'],['墨','#466e5a'],['G','#5a508c'],['本','#a88034'],['+14','#8d8168'] ];
-var signCount = 18;
 function renderWall(){
-  $('wall').innerHTML = wallData.map(function(w){ return '<div class="dot" style="background:'+w[1]+'">'+w[0]+'</div>'; }).join('');
-  $('wallTxt').textContent = '已有 ' + signCount + ' 位朋友留下了祝福';
+  var list = loadSignatures();
+  $('wall').innerHTML = list.map(function(s){ return '<div class="dot" style="background:'+sigColor(s.name)+'">'+escHtml(s.name.slice(0,1))+'</div>'; }).join('');
+  $('wallTxt').textContent = list.length ? ('已有 ' + list.length + ' 位朋友留下了祝福') : '还没有人留言，你是第一个';
+  $('signList').innerHTML = signaturesHtml(list);
 }
 function startWait(target){
   show('v-wait'); renderWall();
@@ -258,19 +312,18 @@ function startWait(target){
   tick(); timer = setInterval(tick, 1000);
 }
 /* 手写板 */
-var pad = $('pad'), ctx = pad.getContext('2d'), drawing = false;
+var pad = $('pad'), ctx = pad.getContext('2d'), drawing = false, padDrawn = false;
 ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.strokeStyle = '#2b2834';
 function padPos(e){ var r = pad.getBoundingClientRect(); var t = e.touches ? e.touches[0] : e; return { x:(t.clientX-r.left)*pad.width/r.width, y:(t.clientY-r.top)*pad.height/r.height }; }
-pad.addEventListener('pointerdown', function(e){ drawing = true; var p = padPos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); });
+pad.addEventListener('pointerdown', function(e){ drawing = true; padDrawn = true; var p = padPos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); });
 pad.addEventListener('pointermove', function(e){ if(!drawing) return; var p = padPos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); });
 window.addEventListener('pointerup', function(){ drawing = false; });
 $('btnSign').onclick = function(){
   var name = $('signName').value.trim();
   if(!name){ toast('先写上你的名字吧'); return; }
-  wallData.splice(wallData.length-1, 0, [name.slice(0,1), '#7a6f5c']);
-  signCount++;
+  addSignature({ name:name, msg:$('signMsg').value.trim(), sig: padDrawn ? pad.toDataURL() : '', voice:null, avatar:null, createdAt: new Date().toISOString() });
   renderWall();
-  $('signName').value=''; $('signMsg').value=''; ctx.clearRect(0,0,pad.width,pad.height);
+  $('signName').value=''; $('signMsg').value=''; ctx.clearRect(0,0,pad.width,pad.height); padDrawn = false;
   toast('已封存。生日当天，他拆礼物时会看到。');
 };
 
@@ -317,7 +370,7 @@ function renderStage(){
     $('letterBox').onclick = function(){ stage++; renderStage(); };
   } else if(key === 'card'){
     var extra = (giftConfig.pkg === 'deluxe') ? '<p style="color:#7a6f5c; font-size:14px; line-height:1.7; text-align:center; margin-top:10px;">珍藏版：每年生日它都会再来一次，并添上新页。</p>' : '';
-    box.innerHTML = '<img class="giftImg" src="assets/card.jpg" alt="联名签名卡">' + extra + '<button class="btn" id="nextBtn">' + nextText + '</button>';
+    box.innerHTML = '<img class="giftImg" src="assets/card.jpg" alt="联名签名卡">' + extra + '<p style="text-align:center; font-weight:700; margin-top:20px;">这次收到的祝福</p><div class="signList">' + signaturesHtml(loadSignatures()) + '</div><button class="btn" id="nextBtn">' + nextText + '</button>';
     $('nextBtn').onclick = function(){ if(isLast){ show('v-keep'); } else { stage++; renderStage(); } };
   } else if(key === 'song'){
     box.innerHTML = '<p class="stageLbl">为 ' + giftConfig.name + ' 唱 的 歌</p><div class="disc" id="disc"></div><div class="songCtl"><button id="playBtn">▶</button></div><audio id="song" src="assets/song.mp3" preload="auto"></audio><button class="btn" id="nextBtn">' + nextText + '</button>';
