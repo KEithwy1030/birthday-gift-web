@@ -53,6 +53,18 @@
   .disc::after { content:""; position:absolute; inset:74px; border-radius:50%; background:#b02c26; border:3px solid #faf6ee; }
   .songCtl { text-align:center; margin-top:6px; }
   .songCtl button { width:64px; height:64px; border-radius:50%; border:none; background:#b02c26; color:#fff; font-size:24px; cursor:pointer; }
+  .lyrBox { height:240px; overflow:hidden; margin-top:14px; position:relative; -webkit-mask-image:linear-gradient(180deg,transparent,#000 18%,#000 82%,transparent); mask-image:linear-gradient(180deg,transparent,#000 18%,#000 82%,transparent); }
+  .lyrTrack { transition:transform .45s ease; padding:100px 0; }
+  .lyr-line { height:40px; line-height:40px; text-align:center; font-size:16px; color:#a3967c; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:font-size .3s, color .3s; }
+  .lyr-line.act { font-size:19px; font-weight:700; color:#2a251e; }
+  .miniPlay { background:#fffdf7; border:1.5px solid #e3d5b3; border-radius:16px; padding:14px 16px; margin-top:14px; }
+  .miniRow { display:flex; align-items:center; gap:12px; }
+  .miniRow button { width:46px; height:46px; border-radius:50%; border:none; background:#b02c26; color:#fff; font-size:18px; cursor:pointer; flex:none; }
+  .miniRow .t { flex:1; min-width:0; }
+  .miniRow .t b { display:block; font-size:15px; }
+  .miniRow .t span { font-size:12px; color:#a3967c; }
+  .prog { height:5px; background:#eadfc2; border-radius:3px; margin-top:12px; cursor:pointer; }
+  .prog i { display:block; height:100%; width:0; background:#b02c26; border-radius:3px; }
   .grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:16px; }
   .grid figure { text-align:center; font-size:12px; color:#7a6f5c; }
   .grid img { width:100%; height:96px; object-fit:cover; object-position:top; border-radius:10px; border:1px solid #e3d5b3; }
@@ -155,7 +167,11 @@
       <figure id="figPaper"><img src="assets/newspaper.jpg" alt="人生报纸"><figcaption>人生报纸</figcaption></figure>
       <figure id="figPoster"><img src="assets/poster.jpg" alt="分享海报"><figcaption>分享海报</figcaption></figure>
     </div>
-    <audio id="keepAudio" controls src="assets/song.mp3"></audio>
+    <div id="keepAudio" class="miniPlay">
+      <div class="miniRow"><button id="keepPlayBtn">▶</button><div class="t"><b id="keepSongTitle">为你唱的歌</b><span>拆礼物时已自动播放 · 点歌词可跳到那一句</span></div></div>
+      <div class="prog" id="keepProg"><i id="keepProgFill"></i></div>
+      <div class="lyrBox" style="height:200px;"><div class="lyrTrack" id="keepLyrTrack"></div></div>
+    </div>
     <div class="posterBox" id="posterBox">
       <h3>分享海报 · 按这份礼物自动生成</h3>
       <p id="posterDesc">海报上的名字、套餐、生日码和二维码，都跟着这份礼物走。</p>
@@ -173,6 +189,7 @@
 </div>
 <div id="toast"></div>
 
+<audio id="bgm" src="assets/song.mp3" preload="auto"></audio>
 <script>
 var $ = function(id){ return document.getElementById(id); };
 function show(id){ document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('on'); }); $(id).classList.add('on'); window.scrollTo(0,0); if(id === 'v-keep'){ renderPoster(); } }
@@ -371,7 +388,7 @@ function stepLabel(key){
   return '下一件';
 }
 function startReveal(){
-  show('v-open'); steps = buildSteps(); stage = 0; confetti(); renderStage();
+  show('v-open'); steps = buildSteps(); stage = 0; confetti(); renderStage(); bgmPlay();
 }
 function renderStage(){
   var box = $('stageBox');
@@ -386,11 +403,10 @@ function renderStage(){
     box.innerHTML = '<img class="giftImg" src="assets/card.jpg" alt="联名签名卡">' + extra + '<p style="text-align:center; font-weight:700; margin-top:20px;">这次收到的祝福</p><div class="signList">' + signaturesHtml(loadSignatures()) + '</div><button class="btn" id="nextBtn">' + nextText + '</button>';
     $('nextBtn').onclick = function(){ if(isLast){ show('v-keep'); } else { stage++; renderStage(); } };
   } else if(key === 'song'){
-    box.innerHTML = '<p class="stageLbl">为 ' + giftConfig.name + ' 唱 的 歌</p><div class="disc" id="disc"></div><div class="songCtl"><button id="playBtn">▶</button></div><audio id="song" src="assets/song.mp3" preload="auto"></audio><button class="btn" id="nextBtn">' + nextText + '</button>';
-    var audio = $('song'), disc = $('disc'), pb = $('playBtn');
-    pb.onclick = function(){ if(audio.paused){ audio.play(); disc.classList.add('playing'); pb.textContent='❚❚'; } else { audio.pause(); disc.classList.remove('playing'); pb.textContent='▶'; } };
-    audio.onended = function(){ disc.classList.remove('playing'); pb.textContent='▶'; };
-    $('nextBtn').onclick = function(){ audio.pause(); if(isLast){ show('v-keep'); } else { stage++; renderStage(); } };
+    box.innerHTML = '<p class="stageLbl">为 ' + giftConfig.name + ' 唱 的 歌</p><div class="disc" id="disc"></div><div class="songCtl"><button id="playBtn">▶</button></div><div class="lyrBox"><div class="lyrTrack" id="lyrTrack"></div></div><button class="btn" id="nextBtn">' + nextText + '</button>';
+    buildLyrics($('lyrTrack')); syncPlayUI(); syncLyrics();
+    $('playBtn').onclick = function(){ bgmToggle(); };
+    $('nextBtn').onclick = function(){ if(isLast){ show('v-keep'); } else { stage++; renderStage(); } };
   } else if(key === 'paper'){
     box.innerHTML = '<p class="stageLbl">' + giftConfig.name + ' 的 人 生 报 纸</p><img class="giftImg" src="assets/newspaper.jpg" alt="人生报纸"><button class="btn" id="nextBtn">' + nextText + '</button>';
     $('nextBtn').onclick = function(){ show('v-keep'); };
@@ -522,6 +538,49 @@ if(location.search.indexOf('wait=1') > -1){
 }
 /* 演示入口：地址带 ?order=1 时，直接看下单页 */
 if(location.search.indexOf('order=1') > -1){ show('v-order'); }
+
+/* ===== 音乐：全局一首歌，揭晓自动播 + 音乐软件式同步歌词 ===== */
+var LYRICS = [{"t": 0.0, "x": "♪"}, {"t": 3.2, "x": "从球场边的青训教练"}, {"t": 16.08, "x": "到灯光亮起的解说席"}, {"t": 19.5, "x": "二零一二那个夏天"}, {"t": 22.86, "x": "一晃就是十多年"}, {"t": 26.56, "x": "这些年路不算好走"}, {"t": 29.84, "x": "看过压抑熬过深夜"}, {"t": 33.12, "x": "可你从来没有躺平"}, {"t": 35.88, "x": "陪你把日子做成实验"}, {"t": 39.62, "x": "老K，生日快乐"}, {"t": 42.74, "x": "这一岁不说空话"}, {"t": 45.68, "x": "愿你睡着时也有钱进来"}, {"t": 51.94, "x": "开麦时总有人在等"}, {"t": 54.22, "x": "老K，生日快乐"}, {"t": 58.69, "x": "这一岁好运站在你这边"}, {"t": 64.77, "x": "老K，生日快乐"}, {"t": 68.75, "x": "这一岁不说空话"}, {"t": 71.67, "x": "愿你睡着时也有钱进来"}, {"t": 78.33, "x": "总有人在等 ♪"}];
+var bgm = $('bgm');
+function bgmPlay(){ var pr = bgm.play(); if(pr && pr.catch){ pr.catch(function(){ var r = function(){ bgm.play(); document.removeEventListener('pointerdown', r); }; document.addEventListener('pointerdown', r); }); } syncPlayUI(); }
+function bgmToggle(){ if(bgm.paused){ bgmPlay(); } else { bgm.pause(); syncPlayUI(); } }
+function syncPlayUI(){
+  var playing = !bgm.paused && !bgm.ended;
+  ['playBtn','keepPlayBtn'].forEach(function(id){ var b = $(id); if(b) b.textContent = playing ? '❚❚' : '▶'; });
+  var d = $('disc'); if(d) d.classList.toggle('playing', playing);
+}
+function buildLyrics(track){
+  if(!track) return;
+  track.innerHTML = LYRICS.map(function(l, i){ return '<div class="lyr-line" data-i="' + i + '">' + l.x + '</div>'; }).join('');
+  track.querySelectorAll('.lyr-line').forEach(function(el){
+    el.onclick = function(){ bgm.currentTime = LYRICS[+el.dataset.i].t + 0.01; bgmPlay(); };
+  });
+}
+function syncLyrics(){
+  var t = bgm.currentTime, idx = 0;
+  for(var i = 0; i < LYRICS.length; i++){ if(t >= LYRICS[i].t) idx = i; }
+  var next = (idx + 1 < LYRICS.length) ? LYRICS[idx + 1].t : (bgm.duration || t + 1);
+  var p = next > LYRICS[idx].t ? Math.min(1, Math.max(0, (t - LYRICS[idx].t) / (next - LYRICS[idx].t))) : 0;
+  document.querySelectorAll('.lyrTrack').forEach(function(track){
+    var lines = track.querySelectorAll('.lyr-line');
+    lines.forEach(function(el, i){
+      el.classList.toggle('act', i === idx);
+      if(i === idx){ el.style.backgroundImage = 'linear-gradient(90deg, #b02c26 ' + (p * 100).toFixed(1) + '%, #2a251e ' + (p * 100).toFixed(1) + '%)'; el.style.webkitBackgroundClip = 'text'; el.style.backgroundClip = 'text'; el.style.color = 'transparent'; }
+      else { el.style.backgroundImage = 'none'; el.style.color = ''; }
+    });
+    var act = lines[idx];
+    if(act){ track.style.transform = 'translateY(' + (-(act.offsetTop - track.parentElement.clientHeight / 2 + 20)) + 'px)'; }
+  });
+  var fill = $('keepProgFill');
+  if(fill && bgm.duration) fill.style.width = (t / bgm.duration * 100) + '%';
+}
+bgm.addEventListener('timeupdate', syncLyrics);
+bgm.addEventListener('play', syncPlayUI);
+bgm.addEventListener('pause', syncPlayUI);
+bgm.addEventListener('ended', syncPlayUI);
+buildLyrics($('keepLyrTrack'));
+var kp = $('keepPlayBtn'); if(kp) kp.onclick = function(){ bgmToggle(); };
+var kprog = $('keepProg'); if(kprog) kprog.onclick = function(e){ if(!bgm.duration) return; var r = kprog.getBoundingClientRect(); bgm.currentTime = bgm.duration * (e.clientX - r.left) / r.width; bgmPlay(); };
 </script>
 </body>
 </html>
