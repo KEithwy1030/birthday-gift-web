@@ -67,6 +67,10 @@
   .field input:focus { border-color:#a88034; }
   .sumBox { background:#fffdf7; border:1.5px solid #e3d5b3; border-radius:16px; padding:18px; margin-top:20px; line-height:1.8; font-size:14px; }
   .sumBox code { word-break:break-all; font-size:12px; color:#7a6f5c; }
+  .posterBox { background:#fffdf7; border:1.5px solid #e3d5b3; border-radius:16px; padding:18px; margin-top:20px; text-align:center; }
+  .posterBox h3 { font-size:16px; margin-bottom:8px; }
+  .posterBox p { font-size:13px; color:#7a6f5c; line-height:1.7; }
+  #posterCanvas { width:100%; border-radius:12px; margin-top:12px; background:#faf6ee; }
   .capsule { border:2px solid #a88034; border-radius:16px; padding:18px; margin-top:22px; text-align:center; background:#fffdf7; }
   .capsule b { color:#a88034; letter-spacing:3px; }
   .confetti { position:absolute; top:-12px; width:9px; height:15px; z-index:50; pointer-events:none; }
@@ -152,17 +156,25 @@
       <figure id="figPoster"><img src="assets/poster.jpg" alt="分享海报"><figcaption>分享海报</figcaption></figure>
     </div>
     <audio id="keepAudio" controls src="assets/song.mp3"></audio>
+    <div class="posterBox" id="posterBox">
+      <h3>分享海报 · 按这份礼物自动生成</h3>
+      <p id="posterDesc">海报上的名字、套餐、生日码和二维码，都跟着这份礼物走。</p>
+      <canvas id="posterCanvas" width="900" height="1200"></canvas>
+      <button class="btn dark" id="btnPoster">重新生成海报</button>
+      <button class="btn" id="btnPosterDownload">下载海报图</button>
+      <p class="tiny" id="posterNote" style="margin-top:10px;">二维码就是这份礼物的链接，扫码直达；海报只说礼物本身，不多加推销的话。</p>
+    </div>
     <div class="capsule" id="keepCapsule"><b>时 间 胶 囊</b><p id="capsuleTxt" style="margin-top:8px; font-size:14px; line-height:1.7;">2027 年 10 月 30 日，这张卡会再次送到他手里，<br>并添上一页今年的新签名。</p></div>
     <button class="btn dark" id="btnVideo">生成一分钟分享视频</button>
     <button class="btn" id="btnSend">我也送一份</button>
-    <p class="tiny">长按上方海报图可以保存，发到朋友圈<br>一首歌 · 一张报纸 · 一张联名卡 —— 生日礼物工坊</p>
+    <p class="tiny">下面这张海报是按这份礼物现生成的，点下载就能保存发朋友圈<br>一首歌 · 一张报纸 · 一张联名卡 —— 生日礼物工坊</p>
   </section>
 </div>
 <div id="toast"></div>
 
 <script>
 var $ = function(id){ return document.getElementById(id); };
-function show(id){ document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('on'); }); $(id).classList.add('on'); window.scrollTo(0,0); }
+function show(id){ document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('on'); }); $(id).classList.add('on'); window.scrollTo(0,0); if(id === 'v-keep'){ renderPoster(); } }
 function toast(t){ var el=$('toast'); el.textContent=t; el.classList.add('on'); setTimeout(function(){ el.classList.remove('on'); },2600); }
 
 /* B1 礼物配置：默认是老 K 的样品；下单或链接参数会覆盖它 */
@@ -418,6 +430,86 @@ $('btnCreate').onclick = function(){
   toast('礼物生成了');
 };
 $('btnOrderBack').onclick = function(){ show('v-code'); };
+
+/* B3 分享海报自动生成：名字、套餐、生日码取当前礼物配置；二维码由礼物链接实时生成
+   （二维码图由 qrserver 按链接现算，该服务回了跨域许可，所以画完的海报能正常下载；
+   二维码或头像万一加载失败，海报仍照常画出来，只是对应位置换成文字，不影响下载） */
+function posterLink(){
+  var link = giftLink();
+  if(location.protocol === 'file:' || link.indexOf('null') === 0){
+    return 'https://keithwy1030.github.io/birthday-gift-web/?name=' + encodeURIComponent(giftConfig.name) + '&code=' + giftConfig.code + '&pkg=' + giftConfig.pkg;
+  }
+  return link;
+}
+function posterQrUrl(){
+  return 'https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=10&data=' + encodeURIComponent(posterLink());
+}
+function drawPosterBase(c){
+  c.fillStyle = '#faf6ee'; c.fillRect(0, 0, 900, 1200);
+  c.strokeStyle = '#a88034'; c.lineWidth = 6; c.strokeRect(18, 18, 864, 1164);
+  c.fillStyle = '#2a251e'; c.textAlign = 'center';
+  c.font = '700 64px serif'; c.fillText(giftConfig.name + '的生日礼物', 450, 150);
+  c.fillStyle = '#b02c26'; c.font = '700 44px serif'; c.fillText('生 日 快 乐', 450, 220);
+  var p = pkgOf();
+  c.fillStyle = '#7a6f5c'; c.font = '30px sans-serif';
+  c.fillText('这份礼物是：' + p.label + ' · 生日码 ' + giftConfig.code, 450, 280);
+}
+function drawPosterAvatar(c, done){
+  var img = new Image();
+  img.onload = function(){
+    c.save(); c.beginPath(); c.arc(450, 430, 110, 0, Math.PI * 2); c.clip();
+    c.drawImage(img, 340, 320, 220, 220); c.restore();
+    c.strokeStyle = '#a88034'; c.lineWidth = 5; c.beginPath(); c.arc(450, 430, 110, 0, Math.PI * 2); c.stroke();
+    done();
+  };
+  img.onerror = function(){
+    c.fillStyle = '#a88034'; c.beginPath(); c.arc(450, 430, 110, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#fff'; c.font = '700 90px sans-serif'; c.fillText(giftConfig.name.slice(0, 1), 450, 462);
+    done();
+  };
+  img.src = 'assets/avatar.jpg';
+}
+function drawPosterQr(c, done){
+  var img = new Image(); img.crossOrigin = 'anonymous';
+  var finish = function(ok){
+    if(ok){
+      c.fillStyle = '#fff'; c.fillRect(300, 600, 300, 300);
+      c.drawImage(img, 300, 600, 300, 300);
+    } else {
+      c.strokeStyle = '#d8c9a3'; c.lineWidth = 3; c.strokeRect(300, 600, 300, 300);
+      c.fillStyle = '#7a6f5c'; c.font = '28px sans-serif'; c.fillText('扫码打不开时，', 450, 730); c.fillText('复制链接同样能进', 450, 775);
+    }
+    c.fillStyle = '#2a251e'; c.font = '700 30px sans-serif'; c.fillText('扫码拆开这份礼物', 450, 960);
+    c.fillStyle = '#7a6f5c'; c.font = '22px monospace';
+    var link = posterLink(), i;
+    for(i = 0; i < link.length; i += 52){ c.fillText(link.slice(i, i + 52), 450, 1010 + Math.floor(i / 52) * 32); }
+    c.fillStyle = '#a3967c'; c.font = '26px sans-serif';
+    c.fillText('一首歌 · 一张报纸 · 一张联名卡', 450, 1110);
+    done();
+  };
+  img.onload = function(){ finish(true); };
+  img.onerror = function(){ finish(false); };
+  img.src = posterQrUrl();
+}
+function renderPoster(){
+  var canvas = $('posterCanvas'); if(!canvas) return;
+  var c = canvas.getContext('2d');
+  var p = pkgOf();
+  $('posterDesc').textContent = '给' + giftConfig.name + '的' + p.label + '，生日码 ' + giftConfig.code + '，二维码扫开就是这份礼物。';
+  drawPosterBase(c);
+  drawPosterAvatar(c, function(){ drawPosterQr(c, function(){}); });
+}
+function downloadPoster(){
+  var canvas = $('posterCanvas'); if(!canvas) return;
+  try {
+    var a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = giftConfig.name + '的生日礼物海报.png';
+    a.click(); toast('海报已下载，可以发给朋友了');
+  } catch(e) { toast('这张海报暂不能直接下载，长按海报图保存即可'); }
+}
+$('btnPoster').onclick = function(){ renderPoster(); toast('海报已按这份礼物重新生成'); };
+$('btnPosterDownload').onclick = function(){ downloadPoster(); };
 
 /* 初始渲染：默认就是老 K 的样品 */
 applyConfig(); renderOrder();
