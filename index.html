@@ -202,7 +202,7 @@ var PKGS = {
   deluxe: { label:'珍藏版联名卡', price:69, hasSong:false, hasCard:true, hasPaper:false },
   full:   { label:'三件套', price:199, hasSong:true, hasCard:true, hasPaper:true }
 };
-var DEFAULT_CONFIG = { name:'老 K', code:'1030', birthday:'1994-10-30', pkg:'full', from:'' };
+var DEFAULT_CONFIG = { name:'老 K', code:'1030', birthday:'1994-10-30', pkg:'full', from:'', giftId:'' };
 function loadConfig(){
   var cfg = {};
   Object.keys(DEFAULT_CONFIG).forEach(function(k){ cfg[k] = DEFAULT_CONFIG[k]; });
@@ -306,10 +306,36 @@ function addSignature(entry){
   var list = loadSignatures(); list.push(entry); saveSignatures(list); return list;
 }
 /* B2 SIGNATURE STORE END */
+/* B6 API BEGIN — 签名接口优先，接口不在时自动退回本地存储。
+   API_BASE 现在是空，行为和以前一模一样；第 3 步部署上线后把 API_BASE
+   填成接口地址、下单时拿到 giftId，签名就走服务器，换设备也能看到。
+   giftId 是随机长码（服务端发），生日码只当仪式，不再当查找的钥匙。 */
+var API_BASE = '';
+function apiGiftId(){ return giftConfig.giftId || ''; }
+function apiEnabled(){ return !!API_BASE && !!apiGiftId(); }
+function loadSignaturesAsync(){
+  if(!apiEnabled()) return Promise.resolve(loadSignatures());
+  return fetch(API_BASE + '/api/gifts/' + encodeURIComponent(apiGiftId()) + '/signatures')
+    .then(function(r){ if(!r.ok) throw new Error('api ' + r.status); return r.json(); })
+    .then(function(list){ return Array.isArray(list) ? list : loadSignatures(); })
+    .catch(function(){ return loadSignatures(); });
+}
+function saveSignatureAsync(entry){
+  if(!apiEnabled()) return Promise.resolve(addSignature(entry));
+  return fetch(API_BASE + '/api/gifts/' + encodeURIComponent(apiGiftId()) + '/signatures', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: entry.name, msg: entry.msg, sig: entry.sig })
+  }).then(function(r){ if(!r.ok) throw new Error('api ' + r.status); return r.json(); })
+    .then(function(saved){ var list = loadSignatures(); list.push(saved); saveSignatures(list); return list; })
+    .catch(function(){ return addSignature(entry); });
+}
+/* B6 API END */
 var SignatureAPI = {
-  /* 正式版后端接入点：把 load/save 换成 fetch('/api/gifts/' + giftId + '/signatures')，其余代码不用动 */
+  /* 正式版后端接入点：loadAsync/saveAsync 先调接口，不通退回本地存储；其余代码不用动 */
   load: loadSignatures,
-  save: addSignature
+  save: addSignature,
+  loadAsync: loadSignaturesAsync,
+  saveAsync: saveSignatureAsync
 };
 function escHtml(s){
   return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -323,10 +349,11 @@ function signaturesHtml(list){
 }
 /* 等待室 */
 function renderWall(){
-  var list = loadSignatures();
-  $('wall').innerHTML = list.map(function(s){ return '<div class="dot" style="background:'+sigColor(s.name)+'">'+escHtml(s.name.slice(0,1))+'</div>'; }).join('');
-  $('wallTxt').textContent = list.length ? ('已有 ' + list.length + ' 位朋友留下了祝福') : '还没有人留言，你是第一个';
-  $('signList').innerHTML = signaturesHtml(list);
+  loadSignaturesAsync().then(function(list){
+    $('wall').innerHTML = list.map(function(s){ return '<div class="dot" style="background:'+sigColor(s.name)+'">'+escHtml(s.name.slice(0,1))+'</div>'; }).join('');
+    $('wallTxt').textContent = list.length ? ('已有 ' + list.length + ' 位朋友留下了祝福') : '还没有人留言，你是第一个';
+    $('signList').innerHTML = signaturesHtml(list);
+  });
 }
 function startWait(target){
   show('v-wait'); renderWall();
@@ -351,10 +378,11 @@ window.addEventListener('pointerup', function(){ drawing = false; });
 $('btnSign').onclick = function(){
   var name = $('signName').value.trim();
   if(!name){ toast('先写上你的名字吧'); return; }
-  addSignature({ name:name, msg:$('signMsg').value.trim(), sig: padDrawn ? pad.toDataURL() : '', voice:null, avatar:null, createdAt: new Date().toISOString() });
-  renderWall();
-  $('signName').value=''; $('signMsg').value=''; ctx.clearRect(0,0,pad.width,pad.height); padDrawn = false;
-  toast('已封存。生日当天，他拆礼物时会看到。');
+  saveSignatureAsync({ name:name, msg:$('signMsg').value.trim(), sig: padDrawn ? pad.toDataURL() : '', voice:null, avatar:null, createdAt: new Date().toISOString() }).then(function(){
+    renderWall();
+    $('signName').value=''; $('signMsg').value=''; ctx.clearRect(0,0,pad.width,pad.height); padDrawn = false;
+    toast('已封存。生日当天，他拆礼物时会看到。');
+  });
 };
 
 /* 揭晓流程 */
@@ -400,7 +428,8 @@ function renderStage(){
     $('letterBox').onclick = function(){ stage++; renderStage(); };
   } else if(key === 'card'){
     var extra = (giftConfig.pkg === 'deluxe') ? '<p style="color:#7a6f5c; font-size:14px; line-height:1.7; text-align:center; margin-top:10px;">珍藏版：每年生日它都会再来一次，并添上新页。</p>' : '';
-    box.innerHTML = '<img class="giftImg" src="assets/card.jpg" alt="联名签名卡">' + extra + '<p style="text-align:center; font-weight:700; margin-top:20px;">这次收到的祝福</p><div class="signList">' + signaturesHtml(loadSignatures()) + '</div><button class="btn" id="nextBtn">' + nextText + '</button>';
+    box.innerHTML = '<img class="giftImg" src="assets/card.jpg" alt="联名签名卡">' + extra + '<p style="text-align:center; font-weight:700; margin-top:20px;">这次收到的祝福</p><div class="signList" id="revealSignList"></div><button class="btn" id="nextBtn">' + nextText + '</button>';
+    loadSignaturesAsync().then(function(list){ var el = $('revealSignList'); if(el) el.innerHTML = signaturesHtml(list); });
     $('nextBtn').onclick = function(){ if(isLast){ show('v-keep'); } else { stage++; renderStage(); } };
   } else if(key === 'song'){
     box.innerHTML = '<p class="stageLbl">为 ' + giftConfig.name + ' 唱 的 歌</p><div class="disc" id="disc"></div><div class="songCtl"><button id="playBtn">▶</button></div><div class="lyrBox"><div class="lyrTrack" id="lyrTrack"></div></div><button class="btn" id="nextBtn">' + nextText + '</button>';
@@ -432,7 +461,7 @@ $('btnCreate').onclick = function(){
   var bd = $('orderBirthday').value;
   if(!name){ toast('先填寿星姓名'); return; }
   if(!/^\d{4}-\d{2}-\d{2}$/.test(bd)){ toast('再选一下寿星生日'); return; }
-  giftConfig = { name:name, code:bd.slice(5,7) + bd.slice(8,10), birthday:bd, pkg:orderPkg, from:$('orderFrom').value.trim() };
+  giftConfig = { name:name, code:bd.slice(5,7) + bd.slice(8,10), birthday:bd, pkg:orderPkg, from:$('orderFrom').value.trim(), giftId:'' };
   saveConfig(); applyConfig();
   var p = PKGS[orderPkg];
   $('orderDone').style.display = 'block';
