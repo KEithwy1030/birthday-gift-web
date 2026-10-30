@@ -166,6 +166,7 @@
     </div>
     <div class="capsule" id="keepCapsule"><b>时 间 胶 囊</b><p id="capsuleTxt" style="margin-top:8px; font-size:14px; line-height:1.7;">2027 年 10 月 30 日，这张卡会再次送到他手里，<br>并添上一页今年的新签名。</p></div>
     <button class="btn dark" id="btnVideo">生成一分钟分享视频</button>
+    <div id="videoBox" style="display:none;margin-top:16px;"><video id="shareVideo" controls preload="none" src="assets/share-video-sample.mp4" style="width:100%;border-radius:12px;"></video><p class="tiny">一分钟样片：联名卡、人生报纸、生日歌依次出现，结尾是站名。</p></div>
     <button class="btn" id="btnSend">我也送一份</button>
     <p class="tiny">下面这张海报是按这份礼物现生成的，点下载就能保存发朋友圈<br>一首歌 · 一张报纸 · 一张联名卡 —— 生日礼物工坊</p>
   </section>
@@ -395,7 +396,7 @@ function renderStage(){
     $('nextBtn').onclick = function(){ show('v-keep'); };
   }
 }
-$('btnVideo').onclick = function(){ toast('正式版会自动把歌、卡和报纸剪成一条一分钟视频'); };
+$('btnVideo').onclick = function(){ $('videoBox').style.display = 'block'; toast('样片已备好，点播放就能看'); };
 $('btnSend').onclick = function(){ show('v-order'); };
 
 /* B1 下单页 */
